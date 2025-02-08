@@ -6,7 +6,7 @@ local allowedNicks = {
     "Knight Of Lovee", "Knight Off Glory", "Knight Spartacus", "Lady Fox", "Machuca Cu", "Mylla",
     "Nogw", "Onlyfanz Billonary", "Pally Of Insane", "Pau Tortus", "Profissional Do Amor",
     "Smoke'd", "Tatsuya", "Weed's-smoker", "Xuxuzinhu", "Yruc Pala", "Yruc Pally", "Yrucc",
-    "Alibae", "Braviin", "Faqs"
+    "Alibae", "Braviin", "Faqs", "Jubi"
 }
 
 -- Função para verificar a validade do script
