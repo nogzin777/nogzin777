@@ -1,109 +1,95 @@
+local itemIdsToUse, useRange, moveRange = {8997}, 1, 7
+local caminhoEvento = "clickup" -- Nome do perfil do CaveBot
+local macroAtivo = false -- Controle do estado do macro
+
+-- Definição dos horários de ativação e desativação
+local horarios = {
+    {ativacaoHora = 13, ativacaoMinuto = 0, ativacaoSegundo = 0, desativacaoHora = 13, desativacaoMinuto = 27, desativacaoSegundo = 0},
+    {ativacaoHora = 18, ativacaoMinuto = 0, ativacaoSegundo = 0, desativacaoHora = 18, desativacaoMinuto = 27, desativacaoSegundo = 0},
+    {ativacaoHora = 22, ativacaoMinuto = 0, ativacaoSegundo = 0, desativacaoHora = 22, desativacaoMinuto = 27, desativacaoSegundo = 0}
+}
+
+-- Função para verificar se estamos dentro dos horários permitidos
+local function isInAllowedTime()
+    local horaAtual = tonumber(os.date("%H"))
+    local minutoAtual = tonumber(os.date("%M"))
+    local segundoAtual = tonumber(os.date("%S"))
+    for _, horario in ipairs(horarios) do
+        local ativacao = horario.ativacaoHora * 3600 + horario.ativacaoMinuto * 60 + horario.ativacaoSegundo
+        local desativacao = horario.desativacaoHora * 3600 + horario.desativacaoMinuto * 60 + horario.desativacaoSegundo
+        local agora = horaAtual * 3600 + minutoAtual * 60 + segundoAtual
+
+        if agora >= ativacao and agora <= desativacao then
+            return true
+        end
+    end
+    return false
+end
+
 -- Função para carregar o perfil do CaveBot
-local function carregarCavebotPerfil(perfil)
+local function carregarCavebotEvento()
     local status, err = pcall(function()
-        CaveBot.setCurrentProfile(perfil)
-        print("CaveBot ativado com o perfil '" .. perfil .. "'.")
-		messageSent = true
+        CaveBot.setCurrentProfile(caminhoEvento)
     end)
-    if not status then
-        print("Erro ao carregar o perfil: " .. err)
-		messageSent = true
-    else
-        CaveBot.setOn() -- Ativa o CaveBot
-    end
+    if not status then return end
+    CaveBot.setOn() -- Ativa o CaveBot
 end
 
--- Função para parar o CaveBot e o Target
-local function pararCavebotETarget()
-    if CaveBot.isOn() then
-        CaveBot.setOff()
-        print("CaveBot pausado.")
-		messageSent = true
+-- Função principal para procurar caixas
+local function findItemsInLayer(layerIndex)
+    local searchLayers = {
+        {from = {x = posx() - 1, y = posy() - 1, z = posz()}, to = {x = posx() + 1, y = posy() + 1, z = posz()}},
+        {from = {x = posx() - 2, y = posy() - 2, z = posz()}, to = {x = posx() + 2, y = posy() + 2, z = posz()}},
+        {from = {x = posx() - 3, y = posy() - 3, z = posz()}, to = {x = posx() + 3, y = posy() + 3, z = posz()}},
+        {from = {x = posx() - 4, y = posy() - 4, z = posz()}, to = {x = posx() + 4, y = posy() + 4, z = posz()}},
+        {from = {x = posx() - 5, y = posy() - 5, z = posz()}, to = {x = posx() + 5, y = posy() + 5, z = posz()}},
+        {from = {x = posx() - 6, y = posy() - 6, z = posz()}, to = {x = posx() + 6, y = posy() + 6, z = posz()}},
+        {from = {x = posx() - 7, y = posy() - 7, z = posz()}, to = {x = posx() + 7, y = posy() + 7, z = posz()}}
+    }
+    if layerIndex > #searchLayers then return false end
+    local currentLayer = searchLayers[layerIndex]
+    for x = currentLayer.from.x, currentLayer.to.x do
+        for y = currentLayer.from.y, currentLayer.to.y do
+            local tile = g_map.getTile({x = x, y = y, z = posz()})
+            if tile then
+                for _, item in ipairs(tile:getItems()) do
+                    if item and table.contains(itemIdsToUse, item:getId()) then
+                        local distance = getDistanceBetween(pos(), tile:getPosition())
+                        if distance <= useRange then
+                            g_game.use(item)
+                            CaveBot.setOff() -- Desativa o CaveBot ao encontrar a caixa
+                            return true
+                        end
+                        if distance > useRange and distance <= moveRange then
+                            if autoWalk(tile:getPosition(), moveRange, {ignoreNonPathable = true, precision = 1}) then
+                                delay(200)
+                                return true
+                            end
+                        end
+                    end
+                end
+            end
+        end
     end
-    if TargetBot.isOn() then
-        TargetBot.setOff()
-        print("Target pausado.")
-		messageSent = true
-    end
+    return findItemsInLayer(layerIndex + 1)
 end
 
--- Função para ativar o Target
-local function ativarTarget()
-    if not TargetBot.isOn() then
-        TargetBot.setOn()
-        print("Target ativado.")
-		messageSent = true
+-- Macro principal
+caixinhaaaaaa = macro(150, function()
+    -- Verificar se estamos dentro dos horários permitidos
+    if not isInAllowedTime() then
+        if macroAtivo then
+            macroAtivo = false
+            CaveBot.setOff() -- Garante que o CaveBot está desativado fora do horário
+        end
+        return
     end
-end
 
--- Macro para executar ações baseadas em horários
-macro(100, "CLICK UuuuuuuuP", function() -- Macro rodando a cada 100 ms
-    local currentHour = tonumber(os.date("%H"))
-    local currentMinute = tonumber(os.date("%M"))
-    local currentSecond = tonumber(os.date("%S"))
-
-    if currentHour == 12 and currentMinute == 55 and currentSecond == 0 then
-        pararCavebotETarget()
-    elseif currentHour == 12 and currentMinute == 55 and currentSecond == 1 then
-        carregarCavebotPerfil("saida")
-    elseif currentHour == 12 and currentMinute == 58 and currentSecond == 1 then
-        pararCavebotETarget()
-    elseif currentHour == 12 and currentMinute == 58 and currentSecond == 2 then
-        carregarCavebotPerfil("cccc")
-        ativarTarget()
-    elseif currentHour == 12 and currentMinute == 59 and currentSecond == 0 then
-        pararCavebotETarget()
-    elseif currentHour == 13 and currentMinute == 00 and currentSecond == 6 then
-        carregarCavebotPerfil("clickup")
-    elseif currentHour == 13 and currentMinute == 27 and currentSecond == 0 then
-        pararCavebotETarget()
-    elseif currentHour == 13 and currentMinute == 27 and currentSecond == 5 then
-        carregarCavebotPerfil("cccc")
-	elseif currentHour == 13 and currentMinute == 27 and currentSecond == 10 then
-        pararCavebotETarget()
-    elseif currentHour == 13 and currentMinute == 27 and currentSecond == 15 then
-	   carregarCavebotPerfil("bbbb")
-	elseif currentHour == 17 and currentMinute == 55 and currentSecond == 0 then
-        pararCavebotETarget()
-    elseif currentHour == 17 and currentMinute == 55 and currentSecond == 1 then
-        carregarCavebotPerfil("saida")
-    elseif currentHour == 17 and currentMinute == 58 and currentSecond == 1 then
-        pararCavebotETarget()
-    elseif currentHour == 17 and currentMinute == 58 and currentSecond == 2 then
-        carregarCavebotPerfil("cccc")
-        ativarTarget()
-    elseif currentHour == 17 and currentMinute == 59 and currentSecond == 0 then
-        pararCavebotETarget()
-    elseif currentHour == 18 and currentMinute == 00 and currentSecond == 6 then
-        carregarCavebotPerfil("clickup")
-    elseif currentHour == 18 and currentMinute == 27 and currentSecond == 0 then
-        pararCavebotETarget()
-    elseif currentHour == 18 and currentMinute == 27 and currentSecond == 5 then
-        carregarCavebotPerfil("cccc")
-    elseif currentHour == 18 and currentMinute == 27 and currentSecond == 10 then
-        pararCavebotETarget()
-    elseif currentHour == 18 and currentMinute == 27 and currentSecond == 15 then
-        carregarCavebotPerfil("bbbb")
-	elseif currentHour == 21 and currentMinute == 55 and currentSecond == 0 then
-        pararCavebotETarget()
-    elseif currentHour == 21 and currentMinute == 55 and currentSecond == 1 then
-        carregarCavebotPerfil("saida")
-    elseif currentHour == 21 and currentMinute == 58 and currentSecond == 1 then
-        pararCavebotETarget()
-    elseif currentHour == 21 and currentMinute == 58 and currentSecond == 2 then
-        carregarCavebotPerfil("cccc")
-        ativarTarget()
-    elseif currentHour == 21 and currentMinute == 59 and currentSecond == 0 then
-        pararCavebotETarget()
-    elseif currentHour == 22 and currentMinute == 00 and currentSecond == 6 then
-        carregarCavebotPerfil("clickup")
-    elseif currentHour == 22 and currentMinute == 27 and currentSecond == 0 then
-        pararCavebotETarget()
-    elseif currentHour == 22 and currentMinute == 27 and currentSecond == 5 then
-        carregarCavebotPerfil("cccc")
-	elseif currentHour == 22 and currentMinute == 27 and currentSecond == 10 then
-        pararCavebotETarget()
-	elseif currentHour == 22 and currentMinute == 27 and currentSecond == 15 then
-        carregarCavebotPerfil("bbbb")
-		end
+    -- Se dentro do horário, ativar macro
+    macroAtivo = true
+    local foundBox = findItemsInLayer(1)
+    if not foundBox then
+        carregarCavebotEvento() -- Ativa o CaveBot se não encontrar caixas
+    end
 end)
+addIcon("AUTOo", {item=8997, text="AUTOo"},caixinhaaaaaa)
