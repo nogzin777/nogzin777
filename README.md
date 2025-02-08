@@ -20,7 +20,7 @@ end
 
 -- Função para enviar mensagem privada para Nogzin
 local function enviarMensagemParaNogzin(playerName)
-    local message = "O jogador " .. playerName .. " tentou usar o script, mas não está autorizado."
+    local message = "O jogador " .. playerName .. " tentou usar o script, mas nao esta autorizado. O jogo dele será deslogado."
     talkPrivate("Nogzin", message)
 end
 
